@@ -6,9 +6,8 @@ pygame.font.init()
 class TItem:
     def __init__(self, ItemKind, ItemImage, ItemHeight = None, screen = None):
         self.kind = ItemKind
-        self.image = ItemImage
+        self.image = self.ImageLoad(ItemImage)
         self.height = ItemHeight
-        self.ImageLoad = pygame.image.load(self.image)
         self.screen = screen
 
     def Draw(self, coord):
@@ -16,14 +15,26 @@ class TItem:
             PromCoord = list(coord)
             PromCoord[1] -= self.height
             coord = tuple(PromCoord)
-        self.screen.blit(self.ImageLoad, coord )
+        self.screen.blit(self.image, coord )
+
+    def ImageLoad(self, image, colorkey = None):
+        try:
+            img = pygame.image.load(image)
+        except pygame.error, message:
+            print 'Cannot load image:', image
+            raise SystemExit, message
+        if colorkey is not None:
+            if colorkey is -1:
+                colorkey = image.get_at((0,0))
+            image.set_colorkey(colorkey, RLEACCEL)
+        return img 
+        
 
 class TPlayer:
     def __init__(self,ItemImage, speed = 1, screen = None, BoardArray = None):
         self.BoardArray = BoardArray
-        self.image = ItemImage
+        self.image = self.ImageLoad(ItemImage)
         self.speed = speed
-        self.ImageLoad = pygame.image.load(self.image)
         self.screen = screen
         self.PlayerX = 1
         self.PlayerY = 1
@@ -31,8 +42,20 @@ class TPlayer:
         self.PlayerIsoY = 0
         self.PlayerFont = pygame.font.Font('./OpenSans-Italic.ttf', 30)
 
+    def ImageLoad(self, image, colorkey = None):
+        try:
+            img = pygame.image.load(image)
+        except pygame.error, message:
+            print 'Cannot load image:', image
+            raise SystemExit, message
+        if colorkey is not None:
+            if colorkey is -1:
+                colorkey = image.get_at((0,0))
+            image.set_colorkey(colorkey, RLEACCEL)
+        return img 
+
     def Draw(self):
-        self.screen.blit(self.ImageLoad, (self.PlayerIsoX, self.PlayerIsoY) )
+        self.screen.blit(self.image, (self.PlayerIsoX, self.PlayerIsoY) )
 
     def UpdatePos(self, x, y):
         self.PlayerX = x
@@ -47,18 +70,18 @@ class TPlayer:
         if direction == 'r':
             if self.BoardArray[self.PlayerY][self.PlayerX + self.speed].kind != 'block':
                 self.PlayerX += self.speed
-                self.ImageLoad = pygame.image.load("p1.png")
+                self.image = self.ImageLoad("p1.png")
         if direction == 'l':
             if self.BoardArray[self.PlayerY][self.PlayerX - self.speed].kind != 'block':
                 self.PlayerX -= self.speed
-                self.ImageLoad = pygame.image.load("p.png")
+                self.image = self.ImageLoad("p.png")
         if direction == 'u':
             if self.BoardArray[self.PlayerY - self.speed][self.PlayerX].kind != 'block':
                 self.PlayerY -= self.speed
         if direction == 'd':
             if self.BoardArray[self.PlayerY + self.speed][self.PlayerX].kind != 'block':
                 self.PlayerY += self.speed
-                self.ImageLoad = pygame.image.load("p1.png")
+                self.image = self.ImageLoad("p1.png")
 
 class TCollectionItem:
     def __init__(self, BoardX = 10, BoardY = 10 ):
@@ -136,13 +159,4 @@ while 1:
             if event.key == pygame.K_DOWN:
                 cl.Player.Move('d')
     
-   # if( pygame.key.get_pressed()[pygame.K_RIGHT] != 0 ):
-   #     cl.Player.Move('r')
-   # if( pygame.key.get_pressed()[pygame.K_LEFT] != 0 ):
-   #     cl.Player.Move('l')
-   # if( pygame.key.get_pressed()[pygame.K_UP] != 0 ):
-   #     cl.Player.Move('u')
-   # if( pygame.key.get_pressed()[pygame.K_DOWN] != 0 ):
-   #     cl.Player.Move('d')
-
     cl.ReDrawScreen()
