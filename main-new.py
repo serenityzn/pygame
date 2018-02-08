@@ -4,11 +4,12 @@ pygame.font.init()
 
 
 class TItem:
-    def __init__(self, ItemKind, ItemImage, ItemHeight = None, screen = None):
+    def __init__(self, ItemKind, ItemImage, ItemHeight = None, screen = None, properties = None):
         self.kind = ItemKind
         self.image = self.ImageLoad(ItemImage)
         self.height = ItemHeight
         self.screen = screen
+        self.properties = properties
 
     def Draw(self, coord):
         if self.height != None:
@@ -40,7 +41,16 @@ class TPlayer:
         self.PlayerY = 1
         self.PlayerIsoX = 0
         self.PlayerIsoY = 0
+        self.Health = 60
+        self.MaxHealth = 60
+        self.Armor = 0
+        self.PlItems = []
+        self.ItemsOn = { 'body': None, 'legs': None, 'head': None, 'weapons': None }
         self.PlayerFont = pygame.font.Font('./OpenSans-Italic.ttf', 30)
+
+    def PickItem(self, item):
+        if item.properties != None:
+            self.PlItems.append(item)
 
     def ImageLoad(self, image, colorkey = None):
         try:
@@ -68,33 +78,34 @@ class TPlayer:
 
     def Move(self, direction):
         if direction == 'r':
-            if self.BoardArray[self.PlayerY][self.PlayerX + self.speed].kind != 'block':
+            if self.BoardArray[self.PlayerY][self.PlayerX + self.speed].kind != 'wall':
                 self.PlayerX += self.speed
                 self.image = self.ImageLoad("p1.png")
         if direction == 'l':
-            if self.BoardArray[self.PlayerY][self.PlayerX - self.speed].kind != 'block':
+            if self.BoardArray[self.PlayerY][self.PlayerX - self.speed].kind != 'wall':
                 self.PlayerX -= self.speed
                 self.image = self.ImageLoad("p.png")
         if direction == 'u':
-            if self.BoardArray[self.PlayerY - self.speed][self.PlayerX].kind != 'block':
+            if self.BoardArray[self.PlayerY - self.speed][self.PlayerX].kind != 'wall':
                 self.PlayerY -= self.speed
         if direction == 'd':
-            if self.BoardArray[self.PlayerY + self.speed][self.PlayerX].kind != 'block':
+            if self.BoardArray[self.PlayerY + self.speed][self.PlayerX].kind != 'wall':
                 self.PlayerY += self.speed
                 self.image = self.ImageLoad("p1.png")
 
 class TCollectionItem:
-    def __init__(self, BoardX = 10, BoardY = 10 ):
+    def __init__(self, LevelArray, PickItemsArray):
         self.BoardArray =[[]]
-        self.BoardSize = [BoardX*42, BoardY*32] 
+        self.PItemsArray =[[]]
         self.size = x, y = 1280, 800
         self.tilesize = 64
-        self.BoardX = BoardX
-        self.BoardY = BoardY
         self.black = 0, 0, 0
         self.screen = pygame.display.set_mode(self.size)
-        self.Items = [ TItem('grass', 'tile.png', screen = self.screen), TItem('block', 'block1.png', 32, screen = self.screen), TItem('block', 'piramid.png', screen = self.screen), TItem('block', 'piramid1.png', 32, screen = self.screen) ]
+        self.Walls = [ TItem('floor', 'tile.png', screen = self.screen), TItem('wall', 'block1.png', 32, screen = self.screen), TItem('wall', 'piramid.png', screen = self.screen), TItem('wall', 'piramid1.png', 32, screen = self.screen) ]
+        self.Items = [ TItem('pants', 'pants.png', screen = self.screen, properties = {'armor': 2, 'durability': '10'})]
         self.Player = TPlayer('p1.png', 1, screen = self.screen, BoardArray = self.BoardArray)
+        self.CreateBoard(LevelArray)
+        self.CreatePickItems(PickItemsArray)
     
     def CreateBoard(self, ConfigBoardArray):
         MaxY = len(ConfigBoardArray[0])
@@ -103,13 +114,28 @@ class TCollectionItem:
             self.BoardArray.append([])
             for j in range(MaxX):
                 if ConfigBoardArray[i][j] == 0:
-                    self.BoardArray[i].append(self.Items[0])
+                    self.BoardArray[i].append(self.Walls[0])
                 elif ConfigBoardArray[i][j] == 1:
-                    self.BoardArray[i].append(self.Items[1])
+                    self.BoardArray[i].append(self.Walls[1])
                 elif ConfigBoardArray[i][j] == 2:
-                    self.BoardArray[i].append(self.Items[2])
+                    self.BoardArray[i].append(self.Walls[2])
                 elif ConfigBoardArray[i][j] == 3:
-                    self.BoardArray[i].append(self.Items[3])
+                    self.BoardArray[i].append(self.Walls[3])
+
+    def CreatePickItems(self, ItemsArray):
+        print ItemsArray
+        maxX = len(ItemsArray[1])
+        maxY = len(ItemsArray[0])
+        for i in range(maxY):
+            self.PItemsArray.append([])
+            for j in range(maxX):
+                print "i={0} j={1}".format(i,j)
+                print self.PItemsArray
+                print "Array{0},{1} = {2}".format(i,j,ItemsArray[i][j])
+                if ItemsArray[i][j] == 0:
+                    self.PItemsArray[i].append(self.Items[0])
+                else:
+                    self.PItemsArray[i].append(None)
 
     def ReDrawScreen(self):
         self.screen.fill(self.black)
@@ -124,6 +150,8 @@ class TCollectionItem:
                     self.Player.Draw()
                 else:
                     self.BoardArray[j][i].Draw((DrawCoord["x"]+9*64, DrawCoord["y"]+1*64))
+                if self.PItemsArray[j][i] != None:
+                    self.PItemsArray[j][i].Draw((DrawCoord["x"]+9*64, DrawCoord["y"]+1*64))
         self.Player.ShowPos()
         pygame.display.flip()
 
@@ -133,7 +161,6 @@ class TCollectionItem:
         res["y"] = (x*self.tilesize + y*self.tilesize)/2
         return res
        
-cl = TCollectionItem(10,10)
 levelArr = [[0,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,0,0,0,0,0,1],
             [1,0,0,1,1,1,1,2,0,1],
@@ -144,7 +171,18 @@ levelArr = [[0,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,0,1,1,1,0,1],
             [1,0,0,2,0,0,0,0,0,3],
             [1,1,1,1,1,1,1,1,1,1]]
-cl.CreateBoard(levelArr)
+itemsArr = [[1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1]]
+cl = TCollectionItem(levelArr, itemsArr)
+#cl.CreateBoard(levelArr)
 
 while 1:
     for event in pygame.event.get():
